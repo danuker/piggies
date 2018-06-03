@@ -5,14 +5,12 @@ import subprocess
 from decimal import Decimal
 from time import time
 
-import pandas as pd
 import jsonrpclib
 import requests
 
-from lib.processing import inexact_to_decimal
-from lib.utils import config_load, assert_type, wait_for_success
+from processing import inexact_to_decimal
 
-logger = logging.getLogger('sys_trader_logger')
+logger = logging.getLogger('piggy_logs')
 
 class PiggyXMR:
     ATOMS = Decimal('1e12')
@@ -116,8 +114,8 @@ class PiggyXMR:
                                   'https://github.com/monero-project/monero/issues/2585')
         self._connect_if_needed()
 
-        assert_type(net_amount, Decimal)
-        assert_type(miner_fee, Decimal)
+        assert isinstance(net_amount, Decimal)
+        assert isinstance(miner_fee, Decimal)
 
         # Convert units (Multiply by ATOMS)
         net_amount_atoms = net_amount * self.ATOMS

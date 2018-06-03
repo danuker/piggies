@@ -1,6 +1,6 @@
 usage: electrum payto [-h] [-v] [-D ELECTRUM_PATH] [-P] [-w WALLET_PATH]
-                      [--testnet] [--segwit] [--nolnet] [-f TX_FEE]
-                      [-F FROM_ADDR] [-c CHANGE_ADDR] [--nocheck] [-u] [--rbf]
+                      [--testnet] [--regtest] [-f FEE] [-F FROM_ADDR]
+                      [-c CHANGE_ADDR] [--nocheck] [-u] [--rbf RBF]
                       [-W PASSWORD] [--locktime LOCKTIME]
                       destination amount
 
@@ -13,18 +13,16 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -f TX_FEE, --fee TX_FEE
-                        Transaction fee (in BTC)
-  -F FROM_ADDR, --from FROM_ADDR
-                        Source address. If it isn't in the wallet, it will ask
-                        for the private key unless supplied in the format
-                        public_key:private_key. It's not saved in the wallet.
-  -c CHANGE_ADDR, --change CHANGE_ADDR
+  -f FEE, --fee FEE     Transaction fee (in BTC)
+  -F FROM_ADDR, --from_addr FROM_ADDR
+                        Source address (must be a wallet address; use sweep to
+                        spend from non-wallet address).
+  -c CHANGE_ADDR, --change_addr CHANGE_ADDR
                         Change address. Default is a spare address, or the
                         source address if it's not in the wallet
   --nocheck             Do not verify aliases
   -u, --unsigned        Do not sign transaction
-  --rbf                 Replace-by-fee transaction
+  --rbf RBF             Replace-by-fee transaction
   -W PASSWORD, --password PASSWORD
                         Password
   --locktime LOCKTIME   Set locktime block number
@@ -37,6 +35,4 @@ global options:
   -w WALLET_PATH, --wallet WALLET_PATH
                         wallet path
   --testnet             Use Testnet
-  --segwit              The Wizard will create Segwit seed phrases (Testnet
-                        only).
-  --nolnet              Use Nolnet
+  --regtest             Use Regtest

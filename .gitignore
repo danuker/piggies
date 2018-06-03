@@ -1,2 +1,4 @@
 .spyproject/
-.pyc
+*.pyc
+datastores/
+wallets/

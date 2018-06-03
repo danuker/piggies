@@ -3,30 +3,42 @@ from decimal import Decimal
 
 import pandas as pd
 
-from lib.utils import assert_type, config_load
-from piggies.piggy_btc import PiggyBTC
+from piggy_btc import PiggyBTC
+#from piggy_xmr import PiggyXMR
 
-logger = logging.getLogger('sys_trader_logger')
+logger = logging.getLogger('piggy_logs')
 
 class MasterPiggy:
     """
     One Piggy to rule them all!
     This class is used to manage money in all the other piggies.
 
-    :param config_file: Path to YML file, or dict with options
+    :param piggy_settings: Dictionary to specify piggy options. Example:
+        `{'BTC': {'wallet_path': '/path/btcwallet/', [...]}, [...]}
     """
 
-    def __init__(self, config_file):
-        self.piggies = {
-            'BTC': PiggyBTC(config_file)
-        }
+    supported = {
+            'BTC': PiggyBTC,
+#            'XMR': PiggyXMR not yet supported
+    }
 
-        self.config = config_load(config_file)
+    def __init__(self, piggy_settings):
+        self.currencies = piggy_settings.keys()
         self._check_currency_support()
 
+        # Initialize the requested piggies
+        self.piggies = {
+            currency: self.supported[currency](
+                **(piggy_settings[currency])
+            )
+            for currency in self.currencies
+        }
+
     def _check_currency_support(self):
-        required = set(self.config['base_currencies'] + [self.config['counter_currency']])
-        supported = set(self.piggies.keys())
+        """Check that all required piggies have been initialized"""
+
+        required = set(self.currencies)
+        supported = set(self.supported.keys())
         missing = required - supported
 
         if missing:
@@ -35,19 +47,19 @@ class MasterPiggy:
             )
 
     def start_servers(self):
-        for p in self.piggies:
+        for p in self.currencies:
             logger.info("Starting RPC server for {}...".format(p))
             self.piggies[p].start_server()
 
     def stop_servers(self):
-        for p in self.piggies:
+        for p in self.currencies:
             logger.info("Stopping RPC server for {}...".format(p))
             self.piggies[p].stop_server()
 
     def get_balances(self):
         balances = {}
 
-        for p in self.piggies:
+        for p in self.currencies:
             balances[p] = self.piggies[p].get_balance()
 
         return pd.Series(balances)
@@ -58,7 +70,7 @@ class MasterPiggy:
     def suggest_miner_fee(self, currency):
         return self.piggies[currency].suggest_miner_fee()
 
-    def transactions_since(self, currency, earliest_possible_received):
+    def transactions_since(self, currency, earliest_possible_received=0):
         earliest_possible_received = float(earliest_possible_received)
         return self.piggies[currency].transactions_since(earliest_possible_received)
 
@@ -69,8 +81,8 @@ class MasterPiggy:
             miner_fee,
             target_address
     ):
-        assert_type(amount, Decimal)
-        assert_type(miner_fee, Decimal)
+        assert isinstance(amount, Decimal)
+        assert isinstance(miner_fee, Decimal)
 
         # TODO: Add sanity check against too large miner fee
 
@@ -81,13 +93,3 @@ class MasterPiggy:
         )
 
         self.piggies[currency].perform_transaction(amount, miner_fee, target_address)
-
-
-if __name__ == '__main__':
-    master = MasterPiggy('config.yml')
-    master.start_servers()
-    logger.warning("get_balances:\n{}\n".format(master.get_balances()))
-    logger.warning("get_receive_address:\n{}\n".format(master.get_receive_address('BTC')))
-    logger.warning("suggest_miner_fee:\n{}\n".format(master.suggest_miner_fee('BTC')))
-    logger.warning("transactions_since:\n{}\n".format(master.transactions_since('BTC', 0)))
-    master.stop_servers()

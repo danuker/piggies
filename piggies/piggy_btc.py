@@ -7,36 +7,48 @@ from decimal import Decimal
 from time import sleep
 
 import jsonrpclib
-import pandas as pd
 
-from lib.processing import inexact_to_decimal
-from lib.utils import config_load, assert_type
+from processing import inexact_to_decimal
 
-logger = logging.getLogger('sys_trader_logger')
+logger = logging.getLogger('piggy_logs')
 
 class PiggyBTC:
-    def __init__(self, config_file):
-        """Manage a Bitcoin wallet
+    def __init__(
+            self,
+            wallet_bin_path,
+            datastore_path,
+            wallet_filename,
+            wallet_password,
+            rpcuser,
+            rpcpassword,
+            rpcport
+        ):
 
-        Latest supported wallet version:
-        https://download.electrum.org/2.9.3/Electrum-2.9.3.tar.gz
-        Extract it to wallets/.
+        """Manage a Bitcoin wallet using Electrum.
 
-        To run this file:
-        > cd SystematicTrader/  # root directory
-        > PYTHONPATH=. python piggies/piggy_btc.py
+        Supported wallet version:
+        https://download.electrum.org/3.1.3/Electrum-3.1.3.tar.gz
+
+        :param wallet_bin_path: Path to Electrum wallet executable
+        :param datastore_path: Path to datastore directory (which includes wallet files and block headers)
+        :param wallet_filename: Name of wallet file to use (must be in `datastore_path/wallets`)
+        :param wallet_password: Password to enter for decrypting wallet
+        :param rpcport: Local port to start the wallet RPC server on
+
         """
-        self.global_config = config_load(config_file)
-        self.my_config = self.global_config['piggies']['BTC']
 
-        self.bin_path = os.path.join(self.my_config['wallet_path'], 'electrum')
-        self.datadir = os.path.abspath(self.my_config['datastore_path'])
+        self.wallet_bin_path = wallet_bin_path
+        self.datadir = os.path.abspath(datastore_path)
+        self.wallet_filename = wallet_filename
+        self.wallet_password = wallet_password
 
-        # Wallet encryption password (hardcoded :p )
-        self.wallet_password = self.my_config['wallet_password']
-        self.rpcport = self.my_config['rpcport']
-        if self.rpcport > 65535:
+        self.rpcuser = rpcuser
+        self.rpcpassword = rpcpassword
+
+        if rpcport > 65535:
             raise ValueError('Port too large: {}'.format(self.rpcport))
+        else:
+            self.rpcport = rpcport
         self.server = None
 
     def _execute_electrum_command(self, command, stdin=None, quiet=False):
@@ -51,15 +63,33 @@ class PiggyBTC:
         if quiet is False:
             logger.info('Executing "{}". {}'.format(command, done_str))
 
+        wallet_file = os.path.join(self.datadir, 'wallets', self.wallet_filename)
+
+        # Ensure existence of wallet binary, datadir, and wallet file
+        os.stat(os.path.abspath(self.wallet_bin_path))
+        try:
+            os.stat(os.path.abspath(self.datadir))
+        except OSError:
+            os.makedirs(os.path.abspath(self.datadir))
+
+        try:
+            os.stat(os.path.abspath(wallet_file))
+        except OSError:
+            logger.critical(
+                    'Missing wallet file "{}"!\ Please create it.'.format(os.path.abspath(wallet_file))
+                    )
+            raise
+
         p = subprocess.Popen(
             [
-                self.bin_path,
+                self.wallet_bin_path,
             ] + command + [
                 '--dir',
                 self.datadir,  # Where to keep data & config
 
                 '--wallet',
-                os.path.join(self.datadir, 'wallets', 'sys_trader_keys.json')
+                wallet_file
+
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -82,13 +112,19 @@ class PiggyBTC:
 
     def _connect_if_needed(self):
         if self.server is None:
-            self.server = jsonrpclib.Server("http://127.0.0.1:{}".format(self.rpcport))
+            self.server = jsonrpclib.Server("http://{}:{}@127.0.0.1:{}".format(
+                    self.rpcuser,
+                    self.rpcpassword,
+                    self.rpcport
+            ))
 
     def _check_payto_help(self):
-        """Check that the help for `payto` has not changed since what we know"""
+        """Check that the help for `payto` has not changed since the version we support."""
 
         _, comms = self._execute_electrum_command(['help', 'payto'], '', quiet=True)
-        if comms[0] != open('piggies/help_rpc_btc_payto.txt').read():
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        payto_help_file = os.path.join(current_dir, 'help_rpc_btc_payto.txt')
+        if comms[0] != open(payto_help_file).read():
             raise ValueError('Error! Help of payto changed on Electrum wallet update.')
 
     def start_server(self):
@@ -97,6 +133,8 @@ class PiggyBTC:
         Use the wallet and datastore paths specified in config.
         """
 
+        self._execute_electrum_command(['setconfig', 'rpcuser', str(self.rpcuser)])
+        self._execute_electrum_command(['setconfig', 'rpcpassword', str(self.rpcpassword)])
         self._execute_electrum_command(['setconfig', 'rpcport', str(self.rpcport)])
         self._execute_electrum_command(['daemon', 'start'])
 
@@ -122,13 +160,13 @@ class PiggyBTC:
     def get_receive_address(self):
         """Returns an unused address where we can receive BTC
 
-        Note: `force` can not be used on an imported keystore.
-        You need to have a separate, seed-generated wallet.
+        Note: if you use an imported keystore instead of a seeded wallet,
+        then `getunusedaddress()` may return None.
         """
         self._connect_if_needed()
 
-        address = self.server.getunusedaddress(force=True)
-        if address is False:
+        address = self.server.getunusedaddress()
+        if not address:
             raise ValueError('Error: can not get unused address!')
 
         return address
@@ -178,7 +216,7 @@ class PiggyBTC:
         history = pd.DataFrame(self.server.history())
 
         # Required as long as Electrum returns us floats via JSON
-        history['value'] = inexact_to_decimal(history['value'])
+        history['value'] = Decimal(str(history['value']))
 
         recently_received = history.loc[
             (history['timestamp'] > float(since_unix_time)) &
@@ -225,21 +263,3 @@ class PiggyBTC:
     def _validate_address(self, btc_address):
         """Raises an exception if address is invalid"""
         self.server.getaddressbalance(btc_address)
-
-
-def main():
-    p = PiggyBTC('config.yml')
-    p.start_server()
-
-    logger.warning('#######################')
-    logger.warning('Calling RPC methods now')
-    logger.warning('#######################')
-    logger.warning('Balance: {}'.format(p.get_balance()))
-    logger.warning('Some new address: {}'.format(p.get_receive_address()))
-    logger.warning("transactions_since: \n{}".format(p.transactions_since(1508496657)))
-
-    p.stop_server()
-
-
-if __name__ == '__main__':
-    main()
