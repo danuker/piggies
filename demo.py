@@ -12,6 +12,7 @@
 # tar xvjf monero-linux-x64-v0.12.0.0.tar.bz2
 
 import logging
+from decimal import Decimal
 
 from piggies import MasterPiggy
 
@@ -49,6 +50,7 @@ def main():
     logger.warning('Balance: {}'.format(mp.get_balances()))
     logger.warning('BTC receive address: {}'.format(mp.get_receive_address('BTC')))
     logger.warning("transactions_since: \n{}".format(mp.transactions_since('BTC')))
+    logger.warning("transactions_since: \n{}".format(mp.perform_transaction('BTC', Decimal(0), Decimal(0), '15u8aAPK4jJ5N8wpWJ5gutAyyeHtKX5i18')))
 
     mp.stop_servers()
 

@@ -56,5 +56,6 @@ To perform tests, run `python setup.py test`.
 All feedback is welcome.
 
 I especially welcome any ideas/problems about security, or about how to do testing.
+If you can think of a way for using [Hypothesis](https://hypothesis.readthedocs.io/en/master/) here, that would be excellent!
 
 Feel free to use GitHub issues, or even open a pull request!

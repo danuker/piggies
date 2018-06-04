@@ -64,7 +64,6 @@ class MasterPiggy:
         return self.piggies[currency].suggest_miner_fee()
 
     def transactions_since(self, currency, earliest_possible_received=0):
-        earliest_possible_received = float(earliest_possible_received)
         return self.piggies[currency].transactions_since(earliest_possible_received)
 
     def perform_transaction(
@@ -76,13 +75,5 @@ class MasterPiggy:
     ):
         assert isinstance(amount, Decimal)
         assert isinstance(miner_fee, Decimal)
-
-        # TODO: Add sanity check against too large miner fee
-
-        raise ValueError(
-            'I am not allowed to perform transactions yet, but I would send {}+{} {} to {}!'.format(
-                amount, miner_fee, currency, target_address
-            )
-        )
 
         self.piggies[currency].perform_transaction(amount, miner_fee, target_address)

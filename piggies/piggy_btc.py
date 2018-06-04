@@ -297,9 +297,15 @@ class PiggyBTC:
 
         self._connect_if_needed()
 
-        assert_type(net_amount, Decimal)
-        assert_type(miner_fee, Decimal)
+        assert isinstance(net_amount, Decimal)
+        assert isinstance(miner_fee, Decimal)
         self._validate_address(target_address)
+
+        raise ValueError(
+            'I am not tested enough to perform transactions yet, but I would send {}+{} BTC to {}!'.format(
+                net_amount, miner_fee, target_address
+            )
+        )
 
         tx = self.server.payto(
             destination=str(target_address),

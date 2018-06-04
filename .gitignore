@@ -1,4 +1,4 @@
-.spyproject/
+*.egg-info
 *.pyc
 datastores/
 wallets/
