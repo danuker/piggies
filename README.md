@@ -6,10 +6,12 @@
 
 Piggies is a package to automatically manage your cryptocurrency wallets from Python.
 
-It works by launching the wallets using Popen, and communicating with them via JSONRPC.
+It works by launching the wallets using `pexpect`, and communicating with them via JSONRPC.
 
 I'm doing this because one should not hold their cryptocurrencies on an exchange, nor trust a closed-source multiwallet.
-However, this is quite difficult, because you have to manage the wallets. Hence this tool :)
+However, this is quite difficult, because you have to manage the wallets.
+
+Hence this tool to help you live in the plumbing age of crypto :)
 
 ## Security risks
 
@@ -46,7 +48,13 @@ I consider Ripple and Stellar too centralized, however will review PRs for them 
 ## Running
 Check out `demo.py` for learning how to configure and use Piggies.
 
+## Testing
+To perform tests, run `python setup.py test`.
+
 ## Feedback
 
-All feedback is welcome. Especially any ideas/problems about security, or about how to do testing, short of copying the source code in assert form.
-Feel free to use GitHub issues, or even send a pull request!
+All feedback is welcome.
+
+I especially welcome any ideas/problems about security, or about how to do testing.
+
+Feel free to use GitHub issues, or even open a pull request!

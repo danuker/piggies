@@ -1,8 +1,6 @@
 import logging
 from decimal import Decimal
 
-import pandas as pd
-
 from piggy_btc import PiggyBTC
 #from piggy_xmr import PiggyXMR
 
@@ -57,12 +55,7 @@ class MasterPiggy:
             self.piggies[p].stop_server()
 
     def get_balances(self):
-        balances = {}
-
-        for p in self.currencies:
-            balances[p] = self.piggies[p].get_balance()
-
-        return pd.Series(balances)
+        return {p: self.piggies[p].get_balance() for p in self.currencies}
 
     def get_receive_address(self, currency):
         return self.piggies[currency].get_receive_address()

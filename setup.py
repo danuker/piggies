@@ -8,5 +8,7 @@ setup(
     author='Dan Gheorghe Haiduc',
     author_email='danuthaiduc@gmail.com',
     packages=['piggies'],
-    install_requires=['jsonrpclib']
+    install_requires=['jsonrpclib'],
+    test_suite='nose.collector',
+    tests_require=['nose']
 )

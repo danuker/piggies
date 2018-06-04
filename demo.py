@@ -1,3 +1,4 @@
+# Before you can use Piggies, you need actual wallets.
 # To fetch and extract the wallet clients, and create wallet files:
 
 # mkdir wallets && cd wallets

@@ -1,16 +1,18 @@
 import json
 import logging
+import numbers
 import os
-import subprocess
 import urllib2
-from decimal import Decimal
-from time import sleep
-
+import pexpect
 import jsonrpclib
+from pexpect import popen_spawn
+from decimal import Decimal
 
 from processing import inexact_to_decimal
 
+
 logger = logging.getLogger('piggy_logs')
+
 
 class PiggyBTC:
     def __init__(
@@ -22,7 +24,7 @@ class PiggyBTC:
             rpcuser,
             rpcpassword,
             rpcport
-        ):
+            ):
 
         """Manage a Bitcoin wallet using Electrum.
 
@@ -51,21 +53,93 @@ class PiggyBTC:
             self.rpcport = rpcport
         self.server = None
 
-    def _execute_electrum_command(self, command, stdin=None, quiet=False):
-        """Run the Electrum binary, with given command arguments and/or stdin input
+    def _execute_electrum_command(
+            self,
+            command,
+            expect=None,
+            stdin_text=None,
+            quiet=False,
+            wait_for_command=True
+            ):
 
-        :param command: List of string CLI arguments
-        :param stdin: String or None; if string: pass in string as stdin to Electrum
+        """
+        Runs commands using the Electrum binary
+
+        :param command: List of string CLI arguments for the Electrum wallet
+        :param expect: Command output to expect, wait for, read, and match.
+        :param stdin_text: String or None; if string: pass in string as stdin to Electrum
+        :param quiet: Suppress printing process details
+        :param wait_for_command: Wait for the program to end (blocking call).
+
+            If true, it uses pexpect with  a pseudo-terminal, but the terminal quits in the following cases:
+                - when the command quits (and it kills the command's children processes)
+                - when the Python script is interrupted
+            If false, it uses Popen, which does not provide a pseudo-terminal (losing, say, password input
+            capability), but it lets the spawned process and its children survive past the Python script.
         """
 
-        done_str = 'Check stdout/stderr here.' if stdin else ''
+        done_str = 'Check stdout/stderr here.' if stdin_text else ''
 
         if quiet is False:
             logger.info('Executing "{}". {}'.format(command, done_str))
 
         wallet_file = os.path.join(self.datadir, 'wallets', self.wallet_filename)
 
-        # Ensure existence of wallet binary, datadir, and wallet file
+        self._check_paths(wallet_file)
+
+        if wait_for_command:
+            process = pexpect.spawn(
+                self.wallet_bin_path,
+                command + [
+                    '--dir', self.datadir,
+                    '--wallet', wallet_file
+                ]
+            )
+
+            if expect:
+                process.expect_exact(expect)
+
+            if stdin_text is not None:
+                process.sendline(stdin_text)
+
+            output = process.read()
+
+            if quiet is False:
+                logger.warning(
+                    'Process printed EOF.\n'
+                    '### OUTPUT:\n{}\n###'.format(output)
+                )
+
+            status = process.wait()
+
+            if quiet is False:
+                logger.info("Exit code {}".format(status))
+
+        else:
+            if expect or stdin_text:
+                raise ValueError(
+                    "Can not properly expect or send text if we don't wait for command."
+                )
+
+            process = popen_spawn.PopenSpawn(
+                [self.wallet_bin_path] +
+                command + [
+                    '--dir', self.datadir,
+                    '--wallet', wallet_file
+                ]
+            )
+
+            output = None
+
+        return process, output
+
+    def _check_paths(self, wallet_file):
+        """
+        Ensure existence of wallet binary, datadir, and wallet file
+
+        :param wallet_file: Path to wallet file
+        """
+
         os.stat(os.path.abspath(self.wallet_bin_path))
         try:
             os.stat(os.path.abspath(self.datadir))
@@ -76,39 +150,10 @@ class PiggyBTC:
             os.stat(os.path.abspath(wallet_file))
         except OSError:
             logger.critical(
-                    'Missing wallet file "{}"!\ Please create it.'.format(os.path.abspath(wallet_file))
-                    )
+                'Missing wallet file "{}"!\n Please create the wallet or change the path.'
+                .format(os.path.abspath(wallet_file))
+            )
             raise
-
-        p = subprocess.Popen(
-            [
-                self.wallet_bin_path,
-            ] + command + [
-                '--dir',
-                self.datadir,  # Where to keep data & config
-
-                '--wallet',
-                wallet_file
-
-            ],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        if stdin is not None:
-            # Note: `communicate` waits for process to end
-            comms = p.communicate(stdin)
-
-            if quiet is False:
-                logger.warning(
-                    'Process returned {}.\n'\
-                    '### STDOUT:\n{}\n### STDERR:\n{}\n'.format(p.returncode, comms[0], comms[1])
-                )
-        else:
-            comms = []
-
-        return p, comms
 
     def _connect_if_needed(self):
         if self.server is None:
@@ -120,12 +165,18 @@ class PiggyBTC:
 
     def _check_payto_help(self):
         """Check that the help for `payto` has not changed since the version we support."""
-
-        _, comms = self._execute_electrum_command(['help', 'payto'], '', quiet=True)
         current_dir = os.path.dirname(os.path.realpath(__file__))
         payto_help_file = os.path.join(current_dir, 'help_rpc_btc_payto.txt')
-        if comms[0] != open(payto_help_file).read():
-            raise ValueError('Error! Help of payto changed on Electrum wallet update.')
+        help_text = open(payto_help_file).read()
+
+        try:
+            _, status = self._execute_electrum_command(
+                    ['help', 'payto'],
+                    expect= help_text,
+                    quiet=True
+            )
+        except pexpect.exceptions.EOF:
+            raise ValueError('Electrum help payto does not match our expectation.')
 
     def start_server(self):
         """Start the RPC server
@@ -136,14 +187,13 @@ class PiggyBTC:
         self._execute_electrum_command(['setconfig', 'rpcuser', str(self.rpcuser)])
         self._execute_electrum_command(['setconfig', 'rpcpassword', str(self.rpcpassword)])
         self._execute_electrum_command(['setconfig', 'rpcport', str(self.rpcport)])
-        self._execute_electrum_command(['daemon', 'start'])
+        self._execute_electrum_command(['daemon', 'start'], wait_for_command=False)
 
-        # Send password via STDIN (ARRRRGHHH)
-        sleep(1)
-        self._execute_electrum_command(['daemon', 'load_wallet'], '{}\n'.format(self.wallet_password))
-
-        # Wait 1 more second to hopefully finish loading the wallet
-        sleep(1)
+        # Send password (this is NOT stdin)
+        self._execute_electrum_command(
+                ['daemon', 'load_wallet'],
+                'Password:', self.wallet_password
+                )
 
         self._check_payto_help()
 
@@ -155,7 +205,7 @@ class PiggyBTC:
         """Return the amount we have in the wallet, confirmed by the blockchain"""
         self._connect_if_needed()
 
-        return Decimal(str(self.server.getbalance()['confirmed']))
+        return inexact_to_decimal(self.server.getbalance()['confirmed'])
 
     def get_receive_address(self):
         """Returns an unused address where we can receive BTC
@@ -208,27 +258,37 @@ class PiggyBTC:
         having the `blocktime` >= the given unix time.
 
         :param since_unix_time: integer or float, unix time
-        :return transactions: DataFrame of transactions
-            Each row in the DataFrame has amount, txid, and time of each transaction
+        :return transactions: List of transaction dictionaries
+            Each dict has `amount`, `txid`, and `time` of each transaction
         """
         self._connect_if_needed()
 
-        history = pd.DataFrame(self.server.history())
+        if not isinstance(since_unix_time, numbers.Real):
+            raise ValueError('since_unix_time must be a number!')
 
-        # Required as long as Electrum returns us floats via JSON
-        history['value'] = Decimal(str(history['value']))
+        history = json.loads(self.server.history())['transactions']
 
-        recently_received = history.loc[
-            (history['timestamp'] > float(since_unix_time)) &
-            (history['confirmations'] >= 1) &
-            (history['value'] > 0)  # We received money (not sent, and not zero)
+        return self._process_history(history, since_unix_time)
+
+    @classmethod
+    def _process_history(cls, history, since_unix_time):
+
+
+        recently_received = [
+            tx for tx in history if
+                (tx['timestamp'] >= since_unix_time) and
+                (tx['confirmations'] >= 1) and
+                (tx['value'] > 0)  # We received money (not sent, and not zero)
         ]
 
-        # Only get the required fields
-        recently_received = recently_received[['txid', 'timestamp', 'value']]
-
-        # Name consistent with Executioner
-        recently_received.columns = ['txid', 'time', 'value']
+        # Only get the required fields, name them consistently, and cast value to Decimal
+        recently_received = [
+            {
+                'txid': tx['txid'],
+                'time': tx['timestamp'],
+                'value': inexact_to_decimal(tx['value'])
+            } for tx in recently_received
+        ]
 
         return recently_received
 
