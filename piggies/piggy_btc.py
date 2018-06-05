@@ -192,7 +192,7 @@ class PiggyBTC:
         # Send password (this is NOT stdin)
         self._execute_electrum_command(
                 ['daemon', 'load_wallet'],
-                'Password:', self.wallet_password
+                ['Password:', 'true'], self.wallet_password
                 )
 
         self._check_payto_help()
@@ -208,7 +208,7 @@ class PiggyBTC:
         return inexact_to_decimal(self.server.getbalance()['confirmed'])
 
     def get_receive_address(self):
-        """Returns an unused address where we can receive BTC
+        """Returns an unused address of this wallet, where we can receive BTC
 
         Note: if you use an imported keystore instead of a seeded wallet,
         then `getunusedaddress()` may return None.
@@ -272,13 +272,19 @@ class PiggyBTC:
 
     @classmethod
     def _process_history(cls, history, since_unix_time):
+        for tx in history:
+            amount, currency = tx['value'].split(' ')
 
+            if currency != 'BTC':
+                raise ValueError('May not treat non-BTC currencies from PiggyBTC!')
+
+            tx['value_decimal'] = Decimal(amount)
 
         recently_received = [
             tx for tx in history if
                 (tx['timestamp'] >= since_unix_time) and
                 (tx['confirmations'] >= 1) and
-                (tx['value'] > 0)  # We received money (not sent, and not zero)
+                (tx['value_decimal'] > 0)  # We received money (not sent, and not zero)
         ]
 
         # Only get the required fields, name them consistently, and cast value to Decimal
@@ -286,7 +292,7 @@ class PiggyBTC:
             {
                 'txid': tx['txid'],
                 'time': tx['timestamp'],
-                'value': inexact_to_decimal(tx['value'])
+                'value': inexact_to_decimal(tx['value_decimal'])
             } for tx in recently_received
         ]
 
@@ -301,16 +307,10 @@ class PiggyBTC:
         assert isinstance(miner_fee, Decimal)
         self._validate_address(target_address)
 
-        raise ValueError(
-            'I am not tested enough to perform transactions yet, but I would send {}+{} BTC to {}!'.format(
-                net_amount, miner_fee, target_address
-            )
-        )
-
         tx = self.server.payto(
             destination=str(target_address),
             amount=str(net_amount),
-            tx_fee=str(miner_fee),
+            fee=str(miner_fee),
             password=self.wallet_password
         )
 

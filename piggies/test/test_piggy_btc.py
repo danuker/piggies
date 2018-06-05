@@ -14,42 +14,42 @@ class PiggyBTCTesting(unittest.TestCase):
                 'txid': 1,
                 'timestamp': 100,
                 'confirmations': 1,
-                'value': 3.14,
+                'value': '3.14 BTC',
             },
             {
                 # Txn too old
                 'txid': 2,
                 'timestamp': 99,
                 'confirmations': 1,
-                'value': 3.14,
+                'value': '3.14 BTC',
             },
             {
                 # Txn unconfirmed
                 'txid': 3,
                 'timestamp': 100,
                 'confirmations': 0,
-                'value': 3.14,
+                'value': '3.14 BTC',
             },
             {
                 # Txn sending money, not receiving
                 'txid': 4,
                 'timestamp': 100,
                 'confirmations': 1,
-                'value': -3.14,
+                'value': '-3.14 BTC',
             },
             {
                 # Txn not affecting balance
                 'txid': 5,
                 'timestamp': 100,
                 'confirmations': 1,
-                'value': -0.0,
+                'value': '-0.0 BTC',
             },
             {
                 # Txn not affecting balance
                 'txid': 6,
                 'timestamp': 100,
                 'confirmations': 1,
-                'value': 0.0,
+                'value': '0.0 BTC',
             },
         ]
 

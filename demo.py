@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Before you can use Piggies, you need actual wallets.
 # To fetch and extract the wallet clients, and create wallet files:
 
@@ -47,12 +49,13 @@ def main():
     logger.warning('#######################')
     logger.warning('Calling RPC methods now')
     logger.warning('#######################')
+
     logger.warning('Balance: {}'.format(mp.get_balances()))
     logger.warning('BTC receive address: {}'.format(mp.get_receive_address('BTC')))
     logger.warning("transactions_since: \n{}".format(mp.transactions_since('BTC')))
-    logger.warning("transactions_since: \n{}".format(mp.perform_transaction('BTC', Decimal(0), Decimal(0), '15u8aAPK4jJ5N8wpWJ5gutAyyeHtKX5i18')))
 
     mp.stop_servers()
+
 
 if __name__ == '__main__':
     logger.addHandler(logging.StreamHandler())
