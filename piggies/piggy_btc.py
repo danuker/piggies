@@ -2,13 +2,16 @@ import json
 import logging
 import numbers
 import os
-import urllib2
 import pexpect
+import socket
+import urllib2
+
 import jsonrpclib
+
 from pexpect import popen_spawn
 from decimal import Decimal
 
-from processing import inexact_to_decimal
+from processing import inexact_to_decimal, wait_for_success
 
 
 logger = logging.getLogger('piggy_logs')
@@ -189,6 +192,9 @@ class PiggyBTC:
         self._execute_electrum_command(['setconfig', 'rpcport', str(self.rpcport)])
         self._execute_electrum_command(['daemon', 'start'], wait_for_command=False)
 
+        # Wait for daemon to start
+        wait_for_success(self._daemon_rpc_loaded, 'BTC Daemon RPC')
+
         # Send password (this is NOT stdin)
         self._execute_electrum_command(
                 ['daemon', 'load_wallet'],
@@ -196,6 +202,15 @@ class PiggyBTC:
                 )
 
         self._check_payto_help()
+
+    def _daemon_rpc_loaded(self):
+        """Check whether RPC server responds to a trivial request"""
+        self._connect_if_needed()
+        try:
+            self.server.version()
+            return True
+        except socket.error:
+            return False
 
     def stop_server(self):
         self._connect_if_needed()

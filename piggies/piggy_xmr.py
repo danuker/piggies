@@ -8,7 +8,7 @@ from time import time
 import jsonrpclib
 import requests
 
-from processing import inexact_to_decimal
+from processing import inexact_to_decimal, wait_for_success
 
 logger = logging.getLogger('piggy_logs')
 

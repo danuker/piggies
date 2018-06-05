@@ -1,4 +1,9 @@
+import logging
+
 from decimal import Decimal
+from time import sleep
+
+logger = logging.getLogger('piggy_logs')
 
 
 def inexact_to_decimal(inexact_float):
@@ -16,3 +21,23 @@ def inexact_to_decimal(inexact_float):
     """
 
     return Decimal(str(inexact_float))
+
+
+def wait_for_success(success_check, description, max_seconds=120):
+    """
+    Wait until calling `success_check` returns a truthy value.
+
+    :param success_check: Callable returning truthy on success, false otherwise
+    :param description: What the task is about (to log)
+    :param max_seconds: Maximum amount of time to wait, before giving up
+    """
+    logger.info('Waiting for {} (at most {} seconds)'.format(description, max_seconds))
+    for wait in range(max_seconds):
+        if success_check():
+            return
+        else:
+            logger.info('Waited for {} ({} seconds so far)'.format(description, wait))
+            sleep(1)
+
+    if not success_check():
+        raise ValueError('{} failed after {} seconds'.format(description, max_seconds))
