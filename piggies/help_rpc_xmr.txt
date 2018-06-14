@@ -1,58 +1,54 @@
-Monero 'Helium Hydra' (v0.11.1.0-release)
-Logging to piggies/wallets/monero-v0.11.1.0/monero-wallet-cli.log
-Opened wallet: 439uQ1o7oj81LyN2RnWThgLBeMz5kszm3GicXTaiZfmvc1QyxGpZDiVSbmMXVwfzd9aRnUM5ccmTChGe8NrthqveLzQQ4Bp
-**********************************************************************
-Use "help" command to see the list of available commands.
-**********************************************************************
-Commands: 
-  address              Show current wallet public address
-  address_book         address_book [(add (<address> [pid <long or short payment id>])|<integrated address> [<description possibly with whitespaces>])|(delete <index>)] - Print all entries in the address book, optionally adding/deleting an entry to/from it
-  balance              Show current wallet balance
-  bc_height            Show blockchain height
-  check_tx_key         Check amount going to <address> in <txid>
-  check_tx_proof       Check tx proof for payment going to <address> in <txid>
-  donate               donate [<ring_size>] <amount> [payment_id] - Donate <amount> to the development team (donate.getmonero.org)
-  export_key_images    Export a signed set of key images
-  export_outputs       Export a set of outputs owned by this wallet
-  fee                  Print information about fee and current transaction backlog
-  get_tx_key           Get transaction key (r) for a given <txid>
-  get_tx_note          Get a string note for a txid
-  get_tx_proof         Generate a signature to prove payment to <address> in <txid> using the transaction secret key (r) without revealing it
-  help                 Show this help
-  import_key_images    Import signed key images list and verify their spent status
-  import_outputs       Import set of outputs owned by this wallet
-  incoming_transfers   incoming_transfers [available|unavailable] - Show incoming transfers, all or filtered by availability
-  integrated_address   integrated_address [PID] - Encode a payment ID into an integrated address for the current wallet public address (no argument uses a random payment ID), or decode an integrated address to standard address and payment ID
-  locked_transfer      locked_transfer [<ring_size>] <addr> <amount> <lockblocks>(Number of blocks to lock the transaction for, max 1000000) [<payment_id>]
-  password             Change wallet password
-  payment_id           Generate a new random full size payment id - these will be unencrypted on the blockchain, see integrated_address for encrypted short payment ids
-  payments             payments <PID_1> [<PID_2> ... <PID_N>] - Show payments for given payment ID[s]
-  refresh              Synchronize transactions and balance
-  rescan_bc            Rescan blockchain from scratch
-  rescan_spent         Rescan blockchain for spent outputs
-  save                 Save wallet data
-  save_bc              Save current blockchain data
-  save_watch_only      Save a watch-only keys file
-  seed                 Display Electrum-style mnemonic seed
-  set                  Available options: seed language - set wallet seed language; always-confirm-transfers <1|0> - whether to confirm unsplit txes; print-ring-members <1|0> - whether to print detailed information about ring members during confirmation; store-tx-info <1|0> - whether to store outgoing tx info (destination address, payment ID, tx secret key) for future reference; default-ring-size <n> - set default ring size (default is 5); auto-refresh <1|0> - whether to automatically sync new blocks from the daemon; refresh-type <full|optimize-coinbase|no-coinbase|default> - set wallet refresh behaviour; priority [0|1|2|3|4] - default/unimportant/normal/elevated/priority fee; confirm-missing-payment-id <1|0>; ask-password <1|0>; unit <monero|millinero|micronero|nanonero|piconero> - set default monero (sub-)unit; min-outputs-count [n] - try to keep at least that many outputs of value at least min-outputs-value; min-outputs-value [n] - try to keep at least min-outputs-count outputs of at least that value; merge-destinations <1|0> - whether to merge multiple payments to the same destination address; confirm-backlog <1|0> - whether to warn if there is transaction backlog; refresh-from-block-height [n] - set height before which to ignore blocks
-  set_log              set_log <level>|<categories> - Change current log detail (level must be <0-4>)
-  set_tx_note          Set an arbitrary string note for a txid
-  show_transfer        Show information about a transfer to/from this address
-  show_transfers       show_transfers [in|out|pending|failed|pool] [<min_height> [<max_height>]] - Show incoming/outgoing transfers within an optional height range
-  sign                 Sign the contents of a file
-  sign_transfer        Sign a transaction from a file
-  spendkey             Display private spend key
-  start_mining         start_mining [<number_of_threads>] - Start mining in daemon
-  status               Show wallet status information
-  stop_mining          Stop mining in daemon
-  submit_transfer      Submit a signed transaction from a file
-  sweep_all            sweep_all [ring_size] address [payment_id] - Send all unlocked balance to an address
-  sweep_below          sweep_below <amount_threshold> [ring_size] address [payment_id] - Send all unlocked outputs below the threshold to an address
-  sweep_unmixable      Send all unmixable outputs to yourself with ring_size 1
-  transfer             transfer [<priority>] [<ring_size>] <address> <amount> [<payment_id>] - Transfer <amount> to <address>. <priority> is the priority of the transaction. The higher the priority, the higher the fee of the transaction. Valid values in priority order (from lowest to highest) are: unimportant, normal, elevated, priority. If omitted, the default value (see the command "set priority") is used. <ring_size> is the number of inputs to include for untraceability. Multiple payments can be made at once by adding <address_2> <amount_2> etcetera (before the payment ID, if it's included)
-  transfer_original    Same as transfer, but using an older transaction building algorithm
-  unspent_outputs      unspent_outputs [<min_amount> <max_amount>] - Show unspent outputs within an optional amount range
-  verify               Verify a signature on the contents of a file
-  viewkey              Display private view key
-  
+[1;37mMonero 'Lithium Luna' (v0.12.2.0-release)
+
+[1;37mThis is the command line monero wallet. It needs to connect to a monero
+daemon to work correctly.
+
+[1;37mUsage:
+  monero-wallet-rpc [--wallet-file=<file>|--generate-from-json=<file>|--wallet-dir=<directory>] [--rpc-bind-port=<port>]
+[1;37m
+General options:
+  --help                                Produce help message
+  --version                             Output version information
+
+Wallet options:
+  --daemon-address arg                  Use daemon instance at <host>:<port>
+  --daemon-host arg                     Use daemon instance at host <arg> 
+                                        instead of localhost
+  --password arg                        Wallet password (escape/quote as 
+                                        needed)
+  --password-file arg                   Wallet password file
+  --daemon-port arg (=0)                Use daemon instance at port <arg> 
+                                        instead of 18081
+  --daemon-login arg                    Specify username[:password] for daemon 
+                                        RPC client
+  --testnet                             For testnet. Daemon must also be 
+                                        launched with --testnet flag
+  --stagenet                            For stagenet. Daemon must also be 
+                                        launched with --stagenet flag
+  --restricted-rpc                      Restricts to view-only commands
+  --shared-ringdb-dir arg (=/home/dan/.shared-ringdb, /home/dan/.shared-ringdb/testnet if 'testnet')
+                                        Set shared ring database path
+  --rpc-bind-port arg                   Sets bind port for server
+  --disable-rpc-login                   Disable HTTP authentication for RPC 
+                                        connections served by this process
+  --trusted-daemon                      Enable commands which rely on a trusted
+                                        daemon
+  --rpc-bind-ip arg (=127.0.0.1)        Specify IP to bind RPC server
+  --rpc-login arg                       Specify username[:password] required 
+                                        for RPC server
+  --confirm-external-bind               Confirm rpc-bind-ip value is NOT a 
+                                        loopback (local) IP
+  --rpc-access-control-origins arg      Specify a comma separated list of 
+                                        origins to allow cross origin resource 
+                                        sharing
+  --wallet-file arg                     Use wallet <arg>
+  --generate-from-json arg              Generate wallet from JSON format file
+  --wallet-dir arg                      Directory for newly created wallets
+  --prompt-for-password                 Prompts for password when not provided
+  --log-file arg                        Specify log file
+  --log-level arg                       0-4 or categories
+  --max-log-file-size arg (=104850000)  Specify maximum log file size [B]
+  --max-concurrency arg (=0)            Max number of threads to use for a 
+                                        parallel job
+  --config-file arg                     Config file
 

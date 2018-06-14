@@ -11,7 +11,7 @@ import jsonrpclib
 from pexpect import popen_spawn
 from decimal import Decimal
 
-from processing import inexact_to_decimal, wait_for_success
+from processing import inexact_to_decimal, wait_for_success, check_port
 
 
 logger = logging.getLogger('piggy_logs')
@@ -43,17 +43,14 @@ class PiggyBTC:
         """
 
         self.wallet_bin_path = wallet_bin_path
-        self.datadir = os.path.abspath(datastore_path)
+        self.datadir = datastore_path
         self.wallet_filename = wallet_filename
         self.wallet_password = wallet_password
 
         self.rpcuser = rpcuser
         self.rpcpassword = rpcpassword
 
-        if rpcport > 65535:
-            raise ValueError('Port too large: {}'.format(self.rpcport))
-        else:
-            self.rpcport = rpcport
+        self.rpcport = check_port(rpcport, 'rpcport')
         self.server = None
 
     def _execute_electrum_command(
@@ -287,6 +284,7 @@ class PiggyBTC:
 
     @classmethod
     def _process_history(cls, history, since_unix_time):
+        """Process the transaction history data"""
         for tx in history:
             amount, currency = tx['value'].split(' ')
 

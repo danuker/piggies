@@ -2,60 +2,166 @@ import logging
 import os
 import socket
 import subprocess
+import pexpect
+from pexpect import popen_spawn
 from decimal import Decimal
 from time import time
 
 import jsonrpclib
 import requests
 
-from processing import inexact_to_decimal, wait_for_success
+from processing import inexact_to_decimal, wait_for_success, check_port
 
 logger = logging.getLogger('piggy_logs')
 
 class PiggyXMR:
     ATOMS = Decimal('1e12')
 
-    def __init__(self, config_file):
-        """Manage a Monero wallet"""
+    def __init__(self,
+                 daemon_bin_path,
+                 wallet_bin_path,
+                 datastore_path,
+                 wallet_filename,
+                 wallet_password,
+                 daemon_port,
+                 rpcport,
+                 ):
+        """
+        Manage a Monero wallet
 
-        self.my_config = config_load(config_file)['piggies']['XMR']
+        :param daemon_bin_path: Path to Monero daemon executable
+        :param wallet_bin_path: Path to Monero RPC wallet executable
+        :param datastore_path: Path to datastore directory (which includes wallet files and blockchain)
+        :param wallet_filename: Name of wallet file to use (must be in `datastore_path/wallets`)
+        :param wallet_password: Password to enter for decrypting wallet
+        :param daemon_port: Local port to start Monero daemon on
+        :param rpcport: Local port to start the wallet RPC server on
+        """
 
-        self.bin_path = os.path.join(self.my_config['wallet_path'], 'monerod')
-        self.wallet_bin_path = os.path.join(self.my_config['wallet_path'], 'monero-wallet-rpc')
-        self.datadir = os.path.abspath(self.my_config['datastore_path'])
+        self.daemon_bin_path = daemon_bin_path
+        self.wallet_bin_path = wallet_bin_path
+        self.datadir = datastore_path
+        self.wallet_filename = wallet_filename
+        self.wallet_password = wallet_password
 
-        # Wallet encryption password (completely pointless)
-        self.wallet_password = self.my_config['wallet_password']
-
-        self.rpcport = self.my_config['rpcport']
-        self.daemon_port = self.my_config['daemon_port']
-        if self.rpcport > 65535:
-            raise ValueError('rpcport too large: {}'.format(self.rpcport))
-        if self.daemon_port > 65535:
-            raise ValueError('daemon_port too large: {}'.format(self.daemon_port))
+        self.rpcport = check_port(rpcport, 'rpcport')
+        self.daemon_port = check_port(daemon_port, 'daemon_port')
         self.server = None
 
     def start_server(self):
-        """Start the RPC server
+        """Start the daemon and the wallet RPC server"""
 
-        Use the wallet and datastore paths specified in config.
-        """
-
+        self._check_docs()
         self._start_monero_daemon()
         self._start_monero_wallet()
-        self._check_docs()
+
+    def _check_docs(self):
+        """Check that the help has not changed since the version we support"""
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        help_file = os.path.join(current_dir, 'help_rpc_xmr.txt')
+        help_text = open(help_file).read()
+
+        logger.info("Checking help cmd: {} {}".format(self.wallet_bin_path, '--help'))
+
+        help_process = pexpect.spawn(self.wallet_bin_path, ['--help'])
+
+        try:
+            help_process.expect_exact(help_text)
+        except pexpect.exceptions.EOF:
+            print '############### OUTPUT ###############'
+            print repr(help_process.read())
+            print '############### OUTPUT ###############'
+            raise ValueError('Error! Help of payto changed on XMR wallet update.')
+
+    def _start_monero_daemon(self):
+        """Run the Monero daemon"""
+        if self._daemon_rpc_loaded():
+            logger.info('XMR Daemon already loaded!')
+            return
+
+        command = [
+            self.daemon_bin_path,
+
+            '--data-dir',
+            self.datadir,  # Where to keep data & config
+
+            '--rpc-bind-port={}'.format(self.daemon_port),
+
+            '--detach',
+            '--non-interactive',
+        ]
+
+        logger.info("Starting XMR daemon: {}".format(' '.join(command)))
+        subprocess.Popen(command)
+
+        wait_for_success(self._daemon_rpc_loaded, 'Daemon RPC')
+
+    def _daemon_rpc_loaded(self):
+        try:
+            requests.post("http://127.0.0.1:{}/getheight".format(self.daemon_port), json={})
+            return True
+        except requests.exceptions.ConnectionError:
+            return False
+
+    def _start_monero_wallet(self):
+        """Run the Monero wallet, which connects to the daemon"""
+
+        if self._wallet_rpc_loaded():
+            logger.info('XMR Wallet already loaded!')
+            return
+
+        command = [
+            self.wallet_bin_path,
+            '--trusted-daemon',  # We trust our own daemon. If you use a different daemon, remove this
+            '--daemon-address',
+            '127.0.0.1:{}'.format(self.daemon_port),
+            '--rpc-bind-port={}'.format(self.rpcport),
+            '--wallet-file',
+            os.path.join(self.datadir, 'wallets', self.wallet_filename),
+            '--disable-rpc-login',
+            '--prompt-for-password',
+            '--max-concurrency',
+            '1'
+        ]
+
+        logger.info("Starting XMR wallet: {}".format(' '.join(command)))
+        wallet_proc = popen_spawn.PopenSpawn(command)
+        logger.info("Sending password")
+        wallet_proc.sendline(self.wallet_password)
+        logger.info("Sent password")
+
+        wait_for_success(self._wallet_rpc_loaded, 'Wallet RPC')
+
+    def _wallet_rpc_loaded(self):
+        try:
+            self.get_balance()
+            return True
+        except socket.error:
+            return False
 
     def stop_server(self):
+        """Stop the wallet and the daemon"""
         self._connect_if_needed()
-        # TODO: Implement method
 
-        raise NotImplementedError
+        result = self.server.stop_wallet()
+        logger.info("stopped wallet: {}".format(result))
+
+        req = requests.post("http://127.0.0.1:{}/stop_daemon".format(self.daemon_port))
+
+        if req.status_code == 200:
+            logger.info("stopped daemon")
+        else:
+            raise ValueError('Unable to stop daemon!\nSTATUS: {}\nText:{}'.format(req.status, req.text))
+
+    def _connect_if_needed(self):
+        if self.server is None:
+            self.server = jsonrpclib.Server("http://127.0.0.1:{}/json_rpc".format(self.rpcport))
 
     def get_balance(self):
         """Return the amount we have in the wallet, confirmed by the blockchain"""
         self._connect_if_needed()
 
-        # Money is unlocked 10 Monero blocks (~15 minutes) after receiving
+        # Money is unlocked 10 Monero blocks after receiving (~15 minutes)
         return Decimal(self.server.getbalance()['unlocked_balance']) / self.ATOMS
 
     def get_receive_address(self):
@@ -66,11 +172,12 @@ class PiggyXMR:
         return result['integrated_address']
 
     def suggest_miner_fee(self):
-        """Returns miner fee to use, for typical transaction"""
+        """
+        Returns miner fee to use, for typical transaction
+        Note: Sadly, we can only do this if we have SOME funds, as far as I know.
+            Please submit a pull request if you can do it some other way!
+        """
 
-
-        raise NotImplementedError('Not Implemented! Wait for Monero release NEWER than 0.11.1.0: '
-                                  'https://github.com/monero-project/monero/issues/2585')
         self._connect_if_needed()
 
         result = self.server.transfer(
@@ -93,22 +200,39 @@ class PiggyXMR:
         self._connect_if_needed()
 
         history = self.server.get_transfers(**{'in': True})
-        history = pd.DataFrame(history['in'])
-        recently_received = history.loc[
-            (history['timestamp'] > float(since_unix_time))
-        ]
 
-        recently_received['value'] = \
-            inexact_to_decimal(recently_received['amount']) / self.ATOMS
+        return self._process_history(history, since_unix_time)
 
-        recently_received = recently_received[['txid', 'timestamp', 'value']]
-        recently_received.columns = ['txid', 'time', 'value']
+    @classmethod
+    def _process_history(cls, history, since_unix_time):
+        """Process the transaction history data"""
 
-        return recently_received
+        if 'in' in history.keys():
+            history_income = history['in']
+            return [
+                {
+                    'txid': txn['txid'],
+                    'time': txn['timestamp'],
+                    'value': inexact_to_decimal(txn['amount']) / cls.ATOMS,
+                }
+                for txn in history_income
+                if
+                    txn['timestamp'] >= float(since_unix_time)
+                and
+                    txn['type'] == 'in'
+                and
+                    txn['amount'] > 0
+            ]
+        else:
+            # We don't have the "in" key in the dict, so we don't have any incoming transactions.
+            return []
 
     def perform_transaction(self, net_amount, miner_fee, target_address):
-        """Send Bitcoins to target_address (total cost: net_amount + miner_fee)"""
+        """
+        Send Monero to target_address (total cost: net_amount + miner_fee)
 
+        Note: here, miner_fee is only used as a check (must equal recent `suggest_miner_fee` output).
+        """
 
         raise NotImplementedError('Not Implemented! Wait for Monero release NEWER than 0.11.1.0: '
                                   'https://github.com/monero-project/monero/issues/2585')
@@ -135,7 +259,7 @@ class PiggyXMR:
 
         if tx['fee'] != miner_fee_atoms:
             raise ValueError(
-                'Miner fee no longer equals the desired fee.\n'
+                'Miner fee no longer equals the desired fee. Please use a freshly estimated fee.\n'
                 'Desired fee: {}\n'
                 'Network-required fee: {}\n'.format(
                     miner_fee, Decimal(tx['fee']) / self.ATOMS
@@ -166,89 +290,6 @@ class PiggyXMR:
         else:
             raise BaseException("XRP Transaction broadcast fail for: {}".format(txid))
 
-    def _start_monero_daemon(self):
-        """Run the Monero daemon"""
-        if self._daemon_rpc_loaded():
-            return
-
-        command = [
-            self.bin_path,
-
-            '--data-dir',
-            self.datadir,  # Where to keep data & config
-
-            '--rpc-bind-port={}'.format(self.daemon_port),
-
-            '--detach',
-            '--non-interactive',
-        ]
-
-        logger.info("Starting daemon: {}".format(' '.join(command)))
-        subprocess.Popen(command)
-
-        wait_for_success(self._daemon_rpc_loaded, 'Daemon RPC')
-
-    def _start_monero_wallet(self):
-        """Run the Monero wallet, which connects to the daemon"""
-
-        if self._wallet_rpc_loaded():
-            return
-
-        command = [
-            self.wallet_bin_path,
-            '--trusted-daemon',     # We trust our own daemon
-            '--daemon-address',
-            '127.0.0.1:{}'.format(self.daemon_port),
-            '--rpc-bind-port={}'.format(self.rpcport),
-            '--disable-rpc-login',
-            '--max-concurrency',
-            '1',
-            '--wallet-file',
-            os.path.join(self.datadir, 'wallets', 'sys_trader_keys')
-        ]
-
-        logger.info("Starting wallet: {}".format(' '.join(command)))
-        p = subprocess.Popen(
-            command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-        # TODO: Redirect STDOUT, STDERR to log
-        p.stdin.writelines([self.wallet_password])
-        p.stdin.close()
-        wait_for_success(self._wallet_rpc_loaded, 'Wallet RPC')
-
-    def _connect_if_needed(self):
-        if self.server is None:
-            self.server = jsonrpclib.Server("http://127.0.0.1:{}/json_rpc".format(self.rpcport))
-
-    def _check_docs(self):
-        """Check that the help has not changed since what we know"""
-
-        cli_binary = os.path.join(self.my_config['wallet_path'], 'monero-wallet-cli')
-        command = [
-            cli_binary,
-            '--daemon-address',
-            '127.0.0.1:{}'.format(self.daemon_port),
-            '--wallet-file',
-            os.path.join(self.datadir, 'wallets', 'sys_trader_keys'),
-            'help'
-        ]
-
-        logger.info("Checking help cmd: ## {} ##".format(' '.join(command)))
-        p = subprocess.Popen(
-            command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        comms = p.communicate(self.wallet_password)
-
-        if comms[0] != open('piggies/help_rpc_xmr.txt').read():
-            raise ValueError('Error! Help of payto changed on XMR wallet update.')
-
     def _broadcast(self, tx_hex):
         """Send the hex-encoded transaction to the daemon to broadcast"""
         # TODO: Test
@@ -273,13 +314,6 @@ class PiggyXMR:
         else:
             raise ValueError("Unsuccessful request to broadcast transaction: {}")
 
-    def _wallet_rpc_loaded(self):
-        try:
-            self.get_balance()
-            return True
-        except socket.error:
-            return False
-
     def _refresh(self):
         logger.debug('Rescanning blockchain for wallet...')
         t1 = time()
@@ -295,13 +329,6 @@ class PiggyXMR:
         )
         t2 = time()
         logger.debug("Flushed tx pool (took {}s): {}".format(t2-t1, res))
-
-    def _daemon_rpc_loaded(self):
-        try:
-            requests.post("http://127.0.0.1:{}/getheight".format(self.daemon_port), json={})
-            return True
-        except requests.exceptions.ConnectionError:
-            return False
 
 
 def try_sending():
