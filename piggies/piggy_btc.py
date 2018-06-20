@@ -81,6 +81,7 @@ class PiggyBTC:
         done_str = 'Check stdout/stderr here.' if stdin_text else ''
 
         if quiet is False:
+            logger.info('#######################')
             logger.info('Executing "{}". {}'.format(command, done_str))
 
         wallet_file = os.path.join(self.datadir, 'wallets', self.wallet_filename)

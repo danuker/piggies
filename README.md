@@ -41,8 +41,12 @@ For Bitcoin, I decided to use Electrum instead of the official Bitcoin client. T
 ### Monero
 Support for the Monero client is in progress, but `perform_transaction` is not yet finished.
 Note: In case something goes wrong when executing commands, and the calls hang or timeout, try the following:
-- Look at the wallet log, created by Monero next to the binaries (we don't catch the output yet).
-- Wait a little (should not be more than 30 seconds though), especially when asking for a transaction fee estimate.
+- Make sure you have the latest blockchain.
+  - Time: since you start the daemon for the first time, it takes two days or so
+  - Space: takes around ~55GB right now
+- Look at the wallet log, created by Monero next to the binaries.
+- Look at the daemon log, usually in the datastore directory at top-level. 
+- Wait a little (should not be more than 30 seconds though), especially when performing a transaction or asking for a transaction fee estimate.
 - Try loading the same wallet with monero-wallet-cli, and see what happens. New wallets have to refresh from the blockchain, and we don't do that automatically yet.
 
 ### Others
