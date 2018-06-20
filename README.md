@@ -34,18 +34,18 @@ I wanted a consistent way to use various cryptocurrencies. The supported operati
 ## Supported wallets
 
 ### Electrum (BTC)
-For Bitcoin, I decided to use Electrum instead of the official Bitcoin client. This is because of two reasons:
+For Bitcoin, I decided to use [Electrum](https://electrum.org/#download) instead of the official Bitcoin client. This is because of two reasons:
 * it seems impossible to precisely specify the amount and fee to send, with the official client
 * Electrum lets you offload computation to Electrum Servers (albeit at a risk of centralizing the Bitcoin network).
 
 ### Monero
-Support for the Monero client is in progress, but `perform_transaction` is not yet finished.
-Note: In case something goes wrong when executing commands, and the calls hang or timeout, try the following:
+Monero is supported via its [official client](https://getmonero.org/downloads/) (requires you to sync the blockchain).
+Note: In case something goes wrong when executing commands, and the calls hang or timeout, check the following:
 - Make sure you have the latest blockchain.
   - Time: since you start the daemon for the first time, it takes two days or so
   - Space: takes around ~55GB right now
 - Look at the wallet log, created by Monero next to the binaries.
-- Look at the daemon log, usually in the datastore directory at top-level. 
+- Look at the daemon log, usually in the datastore directory at top-level.
 - Wait a little (should not be more than 30 seconds though), especially when performing a transaction or asking for a transaction fee estimate.
 - Try loading the same wallet with monero-wallet-cli, and see what happens. New wallets have to refresh from the blockchain, and we don't do that automatically yet.
 
