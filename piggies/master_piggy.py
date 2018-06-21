@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from piggy_btc import PiggyBTC
 from piggy_xmr import PiggyXMR
+from piggy_eth import PiggyETH
 
 logger = logging.getLogger('piggy_logs')
 
@@ -17,7 +18,8 @@ class MasterPiggy:
 
     supported = {
             'BTC': PiggyBTC,
-            'XMR': PiggyXMR
+            'XMR': PiggyXMR,
+            'ETH': PiggyETH,
     }
 
     def __init__(self, piggy_settings):
