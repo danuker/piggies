@@ -10,7 +10,7 @@ from time import time
 import jsonrpclib
 import requests
 
-from processing import inexact_to_decimal, wait_for_success, check_port
+from .processing import inexact_to_decimal, wait_for_success, check_port
 
 logger = logging.getLogger('piggy_logs')
 
@@ -53,27 +53,21 @@ class PiggyXMR:
     def start_server(self):
         """Start the daemon and the wallet RPC server"""
 
-        self._check_docs()
+        self._check_version()
         self._start_monero_daemon()
         self._start_monero_wallet()
 
-    def _check_docs(self):
-        """Check that the help has not changed since the version we support"""
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        help_file = os.path.join(current_dir, 'help_rpc_xmr.txt')
-        help_text = open(help_file).read()
-
-        logger.info("Checking help cmd: {} {}".format(self.wallet_bin_path, '--help'))
-
-        help_process = pexpect.spawn(self.wallet_bin_path, ['--help'])
+    def _check_version(self):
+        """Check that we have the correct version"""
+        process = pexpect.spawn(self.wallet_bin_path, ['--version'])
 
         try:
-            help_process.expect_exact(help_text)
+            process.expect_exact("Monero 'Lithium Luna' (v0.12.2.0-release)")
         except pexpect.exceptions.EOF:
-            print '############### OUTPUT ###############'
-            print repr(help_process.read())
-            print '############### OUTPUT ###############'
-            raise ValueError('Error! Help of payto changed on XMR wallet update.')
+            print('############### OUTPUT ###############')
+            print(repr(process.read()))
+            print('############### OUTPUT ###############')
+            raise ValueError('Error! Version changed on XMR wallet.')
 
     def _start_monero_daemon(self):
         """Run the Monero daemon"""

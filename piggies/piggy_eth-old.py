@@ -91,7 +91,7 @@ class PiggyETH:
 
         # '-d <some-dir> --jsonrpc-port <some-port> --cache-size 1024 --snapshot-peers=25 --ntp-servers=pool.ntp.org:123 --db-compaction ssd --max-peers=150 --min-peers=100',
 
-        print 'Starting ETH Wallet: {}'.format(' '.join(command))
+        logger.info('Starting ETH Wallet: {}'.format(' '.join(command)))
 
         outfile = os.path.join(self.config['wallet_path'], 'eth_logfile.out')
         errfile = os.path.join(self.config['wallet_path'], 'eth_logfile.err')
@@ -171,12 +171,12 @@ class PiggyETH:
         self._connect_if_needed()
 
         def fetch_timestamp(block_index):
-            print 'checking', block_index
+            print('checking', block_index)
             block = self.server.eth_getBlockByNumber('0x'+to_hex(block_index), False)
             return from_hex(block['timestamp'])
 
         at_block = from_hex(self.server.eth_blockNumber())
-        print 'at block:', at_block
+        print('at block:', at_block)
         start_looking = get_block_by_timestamp(since_unix_time, fetch_timestamp, at_block)
 
         if check_range_size:
@@ -209,7 +209,7 @@ class PiggyETH:
         incoming_txns = []
 
         for blocknum in range(start_looking, at_block + 1):
-            print 'Checking txns in {}'.format(blocknum)
+            print('Checking txns in {}'.format(blocknum))
             relevant_txns = self._get_incoming_txns(blocknum)
 
             incoming_txns += relevant_txns
@@ -233,10 +233,10 @@ class PiggyETH:
                     relevant_txns.append(txn)
             else:
                 if txn['value'] != '0x0':
-                    print('Value transfer to unrecognized recipient! {}'.format(txn))
+                    print(('Value transfer to unrecognized recipient! {}'.format(txn)))
 
         if relevant_txns:
-            print 'found incoming:', relevant_txns
+            print('found incoming:', relevant_txns)
         return relevant_txns
 
     def _rpc_loaded(self):
@@ -258,7 +258,7 @@ class PiggyETH:
     def _decode_hexwei(cls, hexwei):
         """Transform (`wei` in base 16) to a Decimal of the Ether equivalent"""
 
-        if not isinstance(hexwei, basestring):
+        if not isinstance(hexwei, str):
             raise ValueError(
                 'Require hexwei as string; got {} ({}) instead.'.format(hexwei, type(hexwei))
             )
@@ -287,10 +287,7 @@ class PiggyETH:
 
     def _get_accounts(self):
         if self.accounts is None:
-            self.accounts = map(
-                lambda addr: addr.lower(),
-                self.server.eth_accounts()
-            )
+            self.accounts = [addr.lower() for addr in self.server.eth_accounts()]
 
         return self.accounts
 
@@ -309,9 +306,9 @@ def main():
     # return
 
     p.start_server()
-    print "addr: ", p.get_receive_address()
-    print "balance: ", p.get_balance()
-    print "fee: ", p.suggest_miner_fee()
+    print("addr: ", p.get_receive_address())
+    print("balance: ", p.get_balance())
+    print("fee: ", p.suggest_miner_fee())
     # TODO: Check out fast and light mode for Ethereum wallets
     if True:
         # we are checking:
@@ -320,7 +317,7 @@ def main():
         # from:	        	0x0fD081e3Bb178dc45c0cb23202069ddA57064258
         timestamp = 1513754931
         p.accounts = ['0x6d91b3b949b53d30c956d19e7ed06466732fc4c0']
-        print 'Block at {}: {}'.format(timestamp, p.transactions_since(timestamp, True))
+        print('Block at {}: {}'.format(timestamp, p.transactions_since(timestamp, True)))
         p.accounts = None
 
 

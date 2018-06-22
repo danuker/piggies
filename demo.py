@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Before you can use Piggies, you need actual wallets.
 # To fetch and extract the wallet clients, and create wallet files:

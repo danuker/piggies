@@ -8,7 +8,7 @@ import socket
 from pexpect import popen_spawn
 from decimal import Decimal
 
-from processing import wait_for_success, check_port
+from .processing import wait_for_success, check_port
 
 logger = logging.getLogger('piggy_logs')
 

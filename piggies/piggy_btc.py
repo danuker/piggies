@@ -4,14 +4,14 @@ import numbers
 import os
 import pexpect
 import socket
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 
 import jsonrpclib
 
 from pexpect import popen_spawn
 from decimal import Decimal
 
-from processing import inexact_to_decimal, wait_for_success, check_port
+from .processing import inexact_to_decimal, wait_for_success, check_port
 
 
 logger = logging.getLogger('piggy_logs')
@@ -164,16 +164,13 @@ class PiggyBTC:
                     self.rpcport
             ))
 
-    def _check_payto_help(self):
-        """Check that the help for `payto` has not changed since the version we support."""
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        payto_help_file = os.path.join(current_dir, 'help_rpc_btc_payto.txt')
-        help_text = open(payto_help_file).read()
+    def _check_version(self):
+        """Check that the version is supported."""
 
         try:
             _, status = self._execute_electrum_command(
-                    ['help', 'payto'],
-                    expect= help_text,
+                    ['version'],
+                    expect='3.1.3',
                     quiet=True
             )
         except pexpect.exceptions.EOF:
@@ -199,7 +196,7 @@ class PiggyBTC:
                 ['Password:', 'true'], self.wallet_password
                 )
 
-        self._check_payto_help()
+        self._check_version()
 
     def _daemon_rpc_loaded(self):
         """Check whether RPC server responds to a trivial request"""
@@ -240,13 +237,13 @@ class PiggyBTC:
 
         We should use fee estimates from Electrum, but it has no API for this.
         """
-        request = urllib2.Request(
+        request = urllib.request.Request(
             'https://bitcoinfees.21.co/api/v1/fees/recommended',
             headers={
                 'User-Agent': 'Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11'
             }
         )
-        response = urllib2.urlopen(request)
+        response = urllib.request.urlopen(request)
         data = json.loads(response.read())
 
         #   The above is in Satoshis/B

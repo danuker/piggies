@@ -1,9 +1,9 @@
 import logging
 from decimal import Decimal
 
-from piggy_btc import PiggyBTC
-from piggy_xmr import PiggyXMR
-from piggy_eth import PiggyETH
+from .piggy_btc import PiggyBTC
+from .piggy_xmr import PiggyXMR
+from .piggy_eth import PiggyETH
 
 logger = logging.getLogger('piggy_logs')
 

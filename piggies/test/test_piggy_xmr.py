@@ -71,11 +71,11 @@ class PiggyXMRTesting(unittest.TestCase):
         }]
 
         processed = PiggyXMR._process_history(txn_history, 100)
-        self.assertEquals(expected, processed)
+        self.assertEqual(expected, processed)
 
     def test_empty_history(self):
         """No incoming txns -> Monero returns empty JSON"""
         processed = PiggyXMR._process_history({}, 100)
 
-        self.assertEquals([], processed)
+        self.assertEqual([], processed)
 

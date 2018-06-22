@@ -60,4 +60,4 @@ class PiggyBTCTesting(unittest.TestCase):
         }]
 
         processed = PiggyBTC._process_history(txn_history, 100)
-        self.assertEquals(expected, processed)
+        self.assertEqual(expected, processed)
