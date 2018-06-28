@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from setuptools import setup
 
 setup(
@@ -9,7 +11,7 @@ setup(
     author='Dan Gheorghe Haiduc',
     author_email='danuthaiduc@gmail.com',
     packages=['piggies'],
-    install_requires=['jsonrpclib', 'web3'],
+    install_requires=['jsonrpclib-pelix', 'web3', 'pyetherchain'],
     test_suite='nose.collector',
     tests_require=['nose']
 )

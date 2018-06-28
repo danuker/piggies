@@ -22,12 +22,21 @@
 # # The next command will sync the Monero blockchain.
 # # It took about 48h (+/- 24h) on an SSD, on 2018-06-06.
 # # An HDD (not SSD) would take about 4.7 times longer!!!
+# # Also, make sure you are using a wired network connection, not Wi-Fi (which is slower)!
 #
 # # Required disk space: Multiply the last reported size here by 1.3:
 # # https://moneroblocks.info/stats/blockchain-growth
 # # Right now, that results in 52932.49 MB (51.69 GB)
 # wallets/monero-v0.12.2.0/monerod --data-dir datastores/XMR --rpc-bind-port=37779
+# cd ..
+
+# wget https://releases.parity.io/v1.11.4/x86_64-unknown-debian-gnu/parity_1.11.4_debian_amd64.deb
+# sudo dpkg -i parity_1.11.4_debian_amd64.deb
+# parity account new -d datastores/ETH/
 #
+# # The Parity wallet also takes a while to sync (around 12h or so, as of 2018-06-28).
+# # Using the CLI options in PiggyETH, the blockchain without ancient blocks only takes up ~24GB.
+# # Check
 # ./demo
 
 import logging
@@ -57,6 +66,12 @@ piggy_settings = {
         'wallet_password': 'your_XMR_password_here',
         'daemon_port': 37779,  # For the default Monero client, the wallet has a separate server daemon
         'rpcport': 37780
+    },
+
+    'ETH': {
+        'wallet_bin_path': '/usr/bin/parity',
+        'datastore_path': 'datastores/ETH',
+        'wallet_password': 'your_ETH_wallet_password_here'
     }
 }
 
@@ -77,6 +92,10 @@ def main():
     logger.warning('XMR Receive address: {}'.format(mp.get_receive_address('XMR')))
     logger.warning("XMR transactions_since: \n{}".format(mp.transactions_since('XMR')))
     logger.warning("XMR suggest_miner_fee: \n{}".format(mp.suggest_miner_fee('XMR')))
+
+    logger.warning('ETH Receive address: {}'.format(mp.get_receive_address('ETH')))
+    logger.warning("ETH transactions_since: \n{}".format(mp.transactions_since('ETH')))
+    logger.warning("ETH suggest_miner_fee: \n{}".format(mp.suggest_miner_fee('ETH')))
 
     mp.stop_servers()
 
