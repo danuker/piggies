@@ -51,9 +51,13 @@ Note: In case something goes wrong when executing commands, and the calls hang o
 
 ### Parity (ETH)
 I support Ethereum via [Parity](https://www.parity.io/), due to its flexibility with blockchain options.
+
 Once [gas estimation works in the light client](https://github.com/paritytech/parity/issues/8976), we will use it. But right now the light client is experimental, and that specific query didn't seem to work for me on the main Ethereum network.
+
 We also send the log to the datastore directory for ETH.
+
 We don't check wallet version compatibility here, because this is handled by Web3.py [so well that you can even use different clients](http://web3py.readthedocs.io/en/stable/node.html).
+
 The connection to Parity is via IPC, not HTTP, so we use whatever node is running on the `datastore_path`, and there is no need for further settings (ports and such).
 
 ### Others
