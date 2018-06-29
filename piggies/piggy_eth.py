@@ -18,20 +18,22 @@ from .processing import wait_for_success, check_port
 logger = logging.getLogger('piggy_logs')
 
 class PiggyETH:
+    TXN_GAS_LIMIT = 21000
+
     def __init__(self,
                   wallet_bin_path,
                   datastore_path,
                   wallet_password,
                   ):
         """
-        Manage an Ethereum Parity wallet.
+        Manage a Parity wallet for Ethereum.
 
-        Wallet key files must be in `datastore_path/keys/ethereum/`.
+        The wallet key file must be in `datastore_path/keys/ethereum/`.
+	Multiple "accounts" (wallet key files) are not supported - see the `accounts` property.
 
         :param wallet_bin_path: Path to Parity wallet executable
         :param datastore_path: Path to datastore directory (which includes wallet files and blockchain)
-        :param wallet_password: Password to enter for decrypting wallet
-        :param rpcport: Local port to start the wallet RPC server on
+        :param wallet_password: Password to enter for decrypting the account
         """
 
         self.wallet_bin_path = wallet_bin_path
@@ -73,6 +75,9 @@ class PiggyETH:
             '-d', self.datastore_path,
             '--log-file', os.path.join(os.getcwd(), self.datastore_path, 'parity_log.txt'),
             '--no-ancient-blocks',
+            '--no-ws',
+            '--no-jsonrpc',
+            '--ipc-apis=web3,eth,personal' # We need personal to actually perform a transaction
             '--warp-barrier', '5842205',
         ]
 
@@ -180,3 +185,38 @@ class PiggyETH:
                 timestr, "%Y-%m-%dT%H:%M:%S.%fZ"
         )
         return calendar.timegm(dt.timetuple())
+
+    def perform_transaction(self, net_amount, miner_fee, target_address):
+        """
+        Send Ether to target_address (total cost: net_amount + miner_fee)
+        """
+        assert isinstance(net_amount, Decimal)
+        assert isinstance(miner_fee, Decimal)
+
+        net_amount_wei = self.server.toWei(net_amount, 'ether')
+        if net_amount_wei != net_amount*Decimal('1e18'):
+            raise ValueError('net_amount is not an integer multiple of wei.')
+
+        gas_price_wei = self._get_gas_price(miner_fee)
+
+        txid = self.server.personal.sendTransaction(
+            {
+                'to': target_address,
+                'gas': self.TXN_GAS_LIMIT,
+                'gasPrice': gas_price_wei,
+                'value': net_amount_wei,
+            },
+            self.wallet_password
+        )
+
+        return txid
+
+    def _get_gas_price(self, eth_to_spend):
+        assert isinstance(eth_to_spend, Decimal)
+
+        wei_to_spend = self.server.toWei(eth_to_spend, 'ether');
+        gas_price_wei = wei_to_spend/self.TXN_GAS_LIMIT
+        if gas_price_wei != int(gas_price_wei):
+            raise ValueError('Transaction fee is not an integer multiple of the gas price.')
+
+        return int(gas_price_wei)

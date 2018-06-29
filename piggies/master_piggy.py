@@ -71,11 +71,11 @@ class MasterPiggy:
     def perform_transaction(
             self,
             currency,
-            amount,
+            net_amount,
             miner_fee,
             target_address
     ):
-        assert isinstance(amount, Decimal)
+        assert isinstance(net_amount, Decimal)
         assert isinstance(miner_fee, Decimal)
 
-        self.piggies[currency].perform_transaction(amount, miner_fee, target_address)
+        self.piggies[currency].perform_transaction(net_amount, miner_fee, target_address)

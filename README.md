@@ -38,7 +38,7 @@ For Bitcoin, I decided to use [Electrum](https://electrum.org/#download) instead
 * it seems impossible to precisely specify the amount and fee to send, with the official client
 * Electrum lets you offload computation to Electrum Servers (albeit at a risk of centralizing the Bitcoin network).
 
-### Monero
+### Monero (XMR)
 Monero is supported via its [official client](https://getmonero.org/downloads/) (requires you to sync the blockchain).
 Note: In case something goes wrong when executing commands, and the calls hang or timeout, check the following:
 - Make sure you have the latest blockchain.
@@ -49,15 +49,22 @@ Note: In case something goes wrong when executing commands, and the calls hang o
 - Wait a little (should not be more than 30 seconds though), especially when performing a transaction or asking for a transaction fee estimate.
 - Try loading the same wallet with monero-wallet-cli, and see what happens. New wallets have to refresh from the blockchain, and we don't do that automatically yet.
 
+### Parity (ETH)
+I support Ethereum via [Parity](https://www.parity.io/), due to its flexibility with blockchain options.
+Once [gas estimation works in the light client](https://github.com/paritytech/parity/issues/8976), we will use it. But right now the light client is experimental, and that specific query didn't seem to work for me on the main Ethereum network.
+We also send the log to the datastore directory for ETH.
+We don't check wallet version compatibility here, because this is handled by Web3.py [so well that you can even use different clients](http://web3py.readthedocs.io/en/stable/node.html).
+The connection to Parity is via IPC, not HTTP, so we use whatever node is running on the `datastore_path`, and there is no need for further settings (ports and such).
+
 ### Others
-I intend to support Ethereum, Litecoin, Bitcoin Cash, ZCash and other distributed currencies.
+I might support Litecoin, Bitcoin Cash, ZCash and other distributed currencies, but I don't know for sure.
 I consider Ripple and Stellar too centralized, however will review PRs for them or any other currency, if you want to support them yourself.
 
 ## Running
 Check out `demo.py` for learning how to configure and use Piggies.
 
 ## Testing
-To perform tests, run `python setup.py test`.
+To perform tests, run `./setup.py test`.
 
 ## Feedback
 
