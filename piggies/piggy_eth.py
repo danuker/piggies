@@ -77,7 +77,7 @@ class PiggyETH:
             '--no-ancient-blocks',
             '--no-ws',
             '--no-jsonrpc',
-            '--ipc-apis=web3,eth,personal' # We need personal to actually perform a transaction
+            '--ipc-apis=web3,eth,personal', # We need personal to actually perform a transaction
             '--warp-barrier', '5842205',
         ]
 
@@ -135,7 +135,6 @@ class PiggyETH:
             - this has privacy implications (you reveal your ETH address to Etherchain)
             - only looks at last `only_look_at` transactions to avoid abusing the server
             - only shows 5 decimals after the point (minimum value 0.00001 ETH)
-        In the future, we might implement support for QuickBlocks to avoid these caveats.
         """
 
 

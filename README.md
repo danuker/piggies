@@ -4,32 +4,77 @@
 
 ## What is Piggies?
 
-Piggies is a package to automatically manage your cryptocurrency wallets from Python.
+Piggies is a package to automatically manage your cryptocurrency [hot wallets](https://en.bitcoin.it/wiki/Hot_wallet) using Python.
 
-It works by launching the wallets using `pexpect`, and communicating with them via JSONRPC.
+It works by launching the wallets using `pexpect`, and communicating with them via RPC.
 
-I'm doing this because one should not hold their cryptocurrencies on an exchange, nor trust a closed-source multiwallet.
-However, this is quite difficult, because you have to manage the wallets.
+The requirement to be automatic:
+* eliminates hardware wallets (you would need to check the addresses and push the button)
+* makes it more dangerous, because there might be security vulnerabilities in the software
+
+I'm doing this because some people still want automatic wallets (i.e. for their exchange websites accepting coins and withdrawals); however:
+* one [should not hold their cryptocurrencies on an exchange](https://www.youtube.com/watch?v=5mcYQpHDgXc)
+* one should not trust [any closed-source multiwallet](https://vxlabs.com/2017/06/10/extracting-the-jaxx-12-word-wallet-backup-phrase/)
+* one should not even trust [an open source web wallet](https://www.coindesk.com/150k-stolen-myetherwallet-users-dns-server-hijacking/).
 
 Hence this tool to help you live in the plumbing age of crypto :)
 
 ## Security risks
 
-* Make sure not to expose the RPC ports you're using to attackers.
-* Do your research before using (and please share findings!)
+* Make sure not to [expose the RPC ports you're using to attackers](https://github.com/spesmilo/electrum/issues/3374#issuecomment-355726294).
+* Do your own security research (and please share findings!)
 * Practice [OPSEC](https://en.wikipedia.org/wiki/Operations_security).
 * I am not responsible if you lose your money.
 
 ## Supported operations
 
 I wanted a consistent way to use various cryptocurrencies. The supported operations are:
-* Checking wallet version compatibility
 * Starting and stopping the wallet RPC servers
 * Retrieving the balance
 * Retrieving an address to receive funds
 * Retrieving recent incoming transactions
 * Suggesting a miner fee
 * Performing a transaction with specified amount to send, and specified miner fee
+
+The operations are available for both `MasterPiggy` and for the wallets individually (`PiggyBTC`, `PiggyETH`...)
+
+## Running
+
+This is a basic demo for Ethereum: it starts `/usr/bin/parity` on the configured `datastore_path`.
+
+```python
+#!/usr/bin/env python3
+
+import logging
+
+from piggies import PiggyETH
+
+logger = logging.getLogger('piggy_logs')
+
+def main():
+    piggy = PiggyETH(
+        wallet_bin_path='/usr/bin/parity',
+        datastore_path='datastores/ETH',
+        wallet_password='your_ETH_wallet_password_here'
+    )
+
+    piggy.start_server()
+
+    print("Balance:", piggy.get_balance())
+    print("Suggested miner fee:", piggy.suggest_miner_fee())
+
+    piggy.stop_server()
+
+
+if __name__ == '__main__':
+    logger.addHandler(logging.StreamHandler())
+    logger.setLevel(logging.INFO)
+    main()
+
+```
+
+For a more advanced demo, including `MasterPiggy`, check out [`demo.py`](demo.py).
+
 
 ## Supported wallets
 
@@ -58,14 +103,13 @@ We also send the log to the datastore directory for ETH.
 
 We don't check wallet version compatibility here, because this is handled by Web3.py [so well that you can even use different clients](http://web3py.readthedocs.io/en/stable/node.html).
 
-The connection to Parity is via IPC, not HTTP, so we use whatever node is running on the `datastore_path`, and there is no need for further settings (ports and such).
+The connection to Parity is via IPC, not HTTP, so we use whatever node is running on the `datastore_path`, and there is no need for further settings (ports and such). It is also somewhat more secure.
+
+For `transactions_since`, we use [an external service](https://www.etherchain.org/) due to it being impractical to do. This has some caveats (see the docs for ETH [`transactions_since`](https://github.com/danuker/piggies/blob/master/piggies/piggy_eth.py#L129)). In the future, we might integrate [QuickBlocks](https://quickblocks.io/) to avoid these caveats.
 
 ### Others
 I might support Litecoin, Bitcoin Cash, ZCash and other distributed currencies, but I don't know for sure.
 I consider Ripple and Stellar too centralized, however will review PRs for them or any other currency, if you want to support them yourself.
-
-## Running
-Check out `demo.py` for learning how to configure and use Piggies.
 
 ## Testing
 To perform tests, run `./setup.py test`.
