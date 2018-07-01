@@ -1,6 +1,6 @@
 # Piggies
 
-![Piggies Logo (a piggybank)](piggies.svg)
+![Piggies Logo (a piggybank)](https://raw.githubusercontent.com/danuker/piggies/master/piggies.svg?sanitize=true)
 
 ## What is Piggies?
 
@@ -12,7 +12,7 @@ The requirement to be automatic:
 * eliminates hardware wallets (you would need to check the addresses and push the button)
 * makes it more dangerous, because there might be security vulnerabilities in the software
 
-I'm doing this because some people still want automatic wallets (i.e. for their exchange websites accepting coins and withdrawals); however:
+I'm doing this because some people (including myself) still want automatic wallets (i.e. for their exchange websites accepting coins and withdrawals); however:
 * one [should not hold their cryptocurrencies on an exchange](https://www.youtube.com/watch?v=5mcYQpHDgXc)
 * one should not trust [any closed-source multiwallet](https://vxlabs.com/2017/06/10/extracting-the-jaxx-12-word-wallet-backup-phrase/)
 * one should not even trust [an open source web wallet](https://www.coindesk.com/150k-stolen-myetherwallet-users-dns-server-hijacking/).
@@ -26,17 +26,15 @@ Hence this tool to help you live in the plumbing age of crypto :)
 * Practice [OPSEC](https://en.wikipedia.org/wiki/Operations_security).
 * I am not responsible if you lose your money.
 
-## Supported operations
+## Installing
 
-I wanted a consistent way to use various cryptocurrencies. The supported operations are:
-* Starting and stopping the wallet RPC servers
-* Retrieving the balance
-* Retrieving an address to receive funds
-* Retrieving recent incoming transactions
-* Suggesting a miner fee
-* Performing a transaction with specified amount to send, and specified miner fee
+Piggies is available on PyPI. You can install it via:
 
-The operations are available for both `MasterPiggy` and for the wallets individually (`PiggyBTC`, `PiggyETH`...)
+`pip3 install piggies`
+
+or via:
+
+`python3 -m pip install piggies`
 
 ## Running
 
@@ -73,8 +71,19 @@ if __name__ == '__main__':
 
 ```
 
-For a more advanced demo, including `MasterPiggy`, check out [`demo.py`](demo.py).
+For a more advanced demo, including `MasterPiggy`, check out [`demo.py`](https://github.com/danuker/piggies/blob/master/demo.py).
 
+## Supported operations
+
+I wanted a consistent way to use various cryptocurrencies. The supported operations are:
+* Starting and stopping the wallet RPC servers
+* Retrieving the balance
+* Retrieving an address to receive funds
+* Retrieving recent incoming transactions
+* Suggesting a miner fee
+* Performing a transaction with specified amount to send, and specified miner fee
+
+The operations are available for both `MasterPiggy` and for the wallets individually (`PiggyBTC`, `PiggyETH`...)
 
 ## Supported wallets
 

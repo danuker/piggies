@@ -2,3 +2,5 @@
 *.pyc
 datastores/
 wallets/
+build/
+dist/
